@@ -89,5 +89,5 @@ if dos_dos:
     st.plotly_chart(fig4)
 
     st.markdown("**Conclusión 2.2:** Aunque no se aplicó una prueba estadística adicional aquí, el gráfico sugiere que una alta asistencia puede estar asociada con mejores resultados académicos, incluso entre quienes tienen trabajo.")
-    st.markdown("dasdaszxcZXzxczxczxczxczxcdasd")
+    st.markdown("")
     
