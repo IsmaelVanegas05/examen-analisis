@@ -9,6 +9,7 @@ st.subheader("Análisis basado en datos de 1,000 estudiantes")
 
 # Descripción general
 st.write("Este estudio analiza cómo los hábitos de estudio, sueño, trabajo a medio tiempo y asistencia influyen en el rendimiento académico.")
+st.write("**Integrantes:** Andres Solorzano, Ismael Vanegas")
 
 # Cargar y limpiar datos
 df = pd.read_csv("student_habits_performance.csv")
