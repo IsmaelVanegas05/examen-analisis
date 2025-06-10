@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from scipy.stats import pearsonr, kruskal, chi2_contingency
+from scipy.stats import pearsonr, kruskal, chi2_contingency, shapiro
 
 # Título de la app
 st.title("Hábitos Estudiantiles y Rendimiento Académico")
@@ -19,8 +19,7 @@ df = df.rename(columns={
     "sleep_hours": "Horas de Sueño",
     "exam_score": "Nota del Examen",
     "part_time_job": "Trabajo Medio Tiempo",
-    "attendance_percentage": "Porcentaje de Asistencia"
-})
+    "attendance_percentage": "Porcentaje de Asistencia"})
 
 st.subheader("Vista previa de los datos")
 st.dataframe(df)
@@ -63,31 +62,71 @@ st.header("Objetivo 2")
 st.markdown("**Comparar el rendimiento académico entre estudiantes que tienen trabajo a medio tiempo y los que no, considerando también su asistencia a clases.**")
 st.markdown("El objetivo es evaluar si el empleo afecta negativamente el desempeño, y si una alta asistencia puede compensarlo.")
 
-# Nota vs Trabajo
-dos_uno=st.toggle("2.1 Comparación de Notas entre Estudiantes con y sin Trabajo")
-if dos_uno:
-    st.subheader("2.1 Comparación de Notas entre Estudiantes con y sin Trabajo")
-    fig3 = px.box(df, x="Trabajo Medio Tiempo", y="Nota del Examen", color="Trabajo Medio Tiempo",
-                title="Trabajo a Medio Tiempo vs Nota del Examen")
-    st.plotly_chart(fig3)
+# Prueba de normalidad por grupo
+trabajo_si = df[df["Trabajo Medio Tiempo"] == "Yes"]["Nota del Examen"]
+trabajo_no = df[df["Trabajo Medio Tiempo"] == "No"]["Nota del Examen"]
 
-    grupo_trabajo = df[df["Trabajo Medio Tiempo"] == "Yes"]["Nota del Examen"]
-    grupo_sin_trabajo = df[df["Trabajo Medio Tiempo"] == "No"]["Nota del Examen"]
-    stat, p = kruskal(grupo_trabajo, grupo_sin_trabajo)
+dos_uno=st.toggle("2.1 Prueba de normalidad por grupo de trabajo")
+if dos_uno:
+    st.subheader("2.1 Prueba de normalidad por grupo de trabajo")
+
+    
+    # Prueba de Shapiro-Wilk
+    stat_si, p_si = shapiro(trabajo_si)
+    stat_no, p_no = shapiro(trabajo_no)
+
+    st.write("**Resultados de la prueba de normalidad (Shapiro-Wilk):**")
+    st.write(f"Estudiantes CON trabajo - Valor P: {p_si:.4f}")
+    st.write(f"Estudiantes SIN trabajo - Valor P: {p_no:.4f}")
+
+    st.markdown("**Conclusión 2.1:** Ninguno de los grupos presenta una distribución normal (p < 0.05), por lo tanto se usará una prueba no paramétrica (Kruskal-Wallis).")
+
+
+# Prueba de Kruskal-Wallis
+dos_dos=st.toggle("2.2 Comparación de notas con prueba de Kruskal-Wallis")
+if dos_dos:
+    st.subheader("2.2 Comparación de notas con prueba de Kruskal-Wallis")
+
+    fig_k = px.box(df, x="Trabajo Medio Tiempo", y="Nota del Examen", color="Trabajo Medio Tiempo",
+                title="Trabajo Medio Tiempo vs Nota del Examen")
+    st.plotly_chart(fig_k)
+
+    stat_k, p_k = kruskal(trabajo_si, trabajo_no)
 
     st.write("**Prueba de Kruskal-Wallis:**")
-    st.write(f"Estadístico: {stat:.3f}, Valor P: {p:.4f}")
+    st.write(f"Estadístico: {stat_k:.3f}, Valor P: {p_k:.4f}")
 
-    st.markdown("**Conclusión 2.1:** Se compararon las notas entre estudiantes que tienen y no tienen trabajo a medio tiempo. No se encontró una diferencia significativa (p ≥ 0.05), por lo tanto no se puede afirmar que el trabajo influya directamente en las notas.")
+    st.markdown("**Conclusión 2.2:** Se compararon las notas entre estudiantes con y sin trabajo. No se encontró diferencia estadísticamente significativa (p ≥ 0.05), por lo tanto no se puede afirmar que el trabajo influya directamente en las notas.")
 
-# Asistencia vs Nota, según trabajo
-dos_dos=st.toggle("2.2 Relación entre Asistencia y Nota del Examen según Trabajo")
-if dos_dos:
-    st.subheader("2.2 Relación entre Asistencia y Nota del Examen según Trabajo")
-    fig4 = px.scatter(df, x="Porcentaje de Asistencia", y="Nota del Examen", color="Trabajo Medio Tiempo",
-                    title="Asistencia vs Nota del Examen por tipo de Trabajo")
-    st.plotly_chart(fig4)
+# Relación visual entre asistencia y nota por tipo de trabajo
+dos_tres=st.toggle("2.3 Relación visual entre Asistencia y Nota del Examen por tipo de Trabajo")
+if dos_tres:
+    st.subheader("2.3 Relación visual entre Asistencia y Nota del Examen por tipo de Trabajo")
 
-    st.markdown("**Conclusión 2.2:** Aunque no se aplicó una prueba estadística adicional aquí, el gráfico sugiere que una alta asistencia puede estar asociada con mejores resultados académicos, incluso entre quienes tienen trabajo.")
-    st.markdown("")
+    fig_asistencia = px.scatter(df, x="Porcentaje de Asistencia", y="Nota del Examen", color="Trabajo Medio Tiempo",
+                                title="Asistencia vs Nota del Examen por tipo de Trabajo")
+    st.plotly_chart(fig_asistencia)
+
+    st.markdown("**Conclusión 2.3:** El gráfico permite observar que una alta asistencia podría relacionarse con mejor rendimiento, incluso en quienes trabajan.")
+
+# Prueba de Chi-cuadrado: Trabajo vs Rendimiento (Alto/Bajo)
+dos_cuatro=st.toggle("2.4 Relación entre Trabajo y Nivel de Rendimiento (Chi-cuadrado)")
+if dos_cuatro:
+    st.subheader("2.4 Relación entre Trabajo y Nivel de Rendimiento (Chi-cuadrado)")
+
+    # Crear variable categórica rendimiento
+    df["Rendimiento"] = pd.cut(df["Nota del Examen"], bins=[0, 69.99, 100], labels=["Bajo", "Alto"])
+
+    # Tabla de contingencia
+    tabla = pd.crosstab(df["Trabajo Medio Tiempo"], df["Rendimiento"])
+    st.write("**Tabla de contingencia:**")
+    st.dataframe(tabla)
+
+    # Prueba de chi-cuadrado
+    chi2, p_chi, dof, expected = chi2_contingency(tabla)
+
+    st.write("**Prueba de Chi-cuadrado:**")
+    st.write(f"Estadístico: {chi2:.3f}, Valor P: {p_chi:.4f}")
+
+    st.markdown("**Conclusión 2.4:** La prueba evalúa si existe relación entre tener trabajo y el nivel de rendimiento académico. No se observó una relación significativa (p ≥ 0.05), por lo que no se puede afirmar que el trabajo esté asociado con un nivel específico de rendimiento.")
     
